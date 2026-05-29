@@ -1,7 +1,12 @@
 [package]
 name = "tui_basketball"
 version = "0.1.0"
-edition = "2024"
+edition = "2026"
+description = "Terminal based NBA game stats viewer using ratatui"
+readme = "README.md"
+keywords = ["NBA", "terminal"]
+license = "MIT"
+repository = "https://github.com/Shaven-Wickramanayaka/tui_basketball"
 
 [dependencies]
 color-eyre = "0.6.3"
