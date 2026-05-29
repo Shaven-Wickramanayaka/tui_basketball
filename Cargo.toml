@@ -1,7 +1,7 @@
 [package]
 name = "tui_basketball"
 version = "0.1.0"
-edition = "2026"
+edition = "2024"
 description = "Terminal based NBA game stats viewer using ratatui"
 readme = "README.md"
 keywords = ["NBA", "terminal"]
