@@ -2,7 +2,6 @@ use color_eyre::{eyre::Ok};
 
 use ratatui::{DefaultTerminal, Frame, layout::{Constraint, Direction, Layout}, style::{ Color, Style}, text::{Line, Span}, widgets::{Block, Borders, List, ListItem, Paragraph}
 };
-// use ratatui::style::{Style};
 use serde::Deserialize;
 use reqwest::header::AUTHORIZATION;
 use chrono::{DateTime,Utc};    
