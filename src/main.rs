@@ -10,24 +10,12 @@ use std::collections::HashMap;
 
 struct App{
     games: Vec<Stats>,
-    selected: usize,
 }
 impl App{
     fn new(games: Vec<Stats>) -> Self{
-        Self{games,selected: 0}
+        Self{games}
     }
 
-    fn scroll_up(&mut self) {
-        if self.selected > 0 {
-            self.selected -= 1;
-        }
-    }
-
-    fn scroll_down(&mut self) {
-        if self.selected + 1 < self.games.len() {
-            self.selected += 1;
-        }
-    }
 }
 #[derive(Deserialize)]
 struct AllData{
@@ -71,14 +59,6 @@ fn get_games() -> color_eyre::Result<Vec<Stats>>{
 fn run(terminal: &mut DefaultTerminal, app: &mut App) -> std::io::Result<()>{
     loop {
         terminal.draw(|f| render(f, app))?;
-        if let crossterm::event::Event::Key(key_pressed) = crossterm::event::read()? {
-            use  crossterm::event::KeyCode;
-            match key_pressed.code{
-                KeyCode::Up   | KeyCode::Char('k') => app.scroll_up(),
-                KeyCode::Down | KeyCode::Char('j') => app.scroll_down(),
-                _ => {}
-            }
-        }
     }
 }
 
