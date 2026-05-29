@@ -1,12 +1,35 @@
-use color_eyre::Result;
-use crossterm::event::{self, Event};
-use ratatui::{DefaultTerminal, Frame};
+use color_eyre::{eyre::Ok};
+
+use ratatui::{DefaultTerminal, Frame, layout::{Constraint, Direction, Layout}, style::{ Color, Style}, text::{Line, Span}, widgets::{Block, Borders, List, ListItem, Paragraph}
+};
+// use ratatui::style::{Style};
 use serde::Deserialize;
 use reqwest::header::AUTHORIZATION;
 use chrono::{DateTime,Utc};    
 use std::time::SystemTime;
 use std::collections::HashMap;
- 
+
+struct App{
+    games: Vec<Stats>,
+    selected: usize,
+}
+impl App{
+    fn new(games: Vec<Stats>) -> Self{
+        Self{games,selected: 0}
+    }
+
+    fn scroll_up(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+        }
+    }
+
+    fn scroll_down(&mut self) {
+        if self.selected + 1 < self.games.len() {
+            self.selected += 1;
+        }
+    }
+}
 #[derive(Deserialize)]
 struct AllData{
     data: Vec<Stats>
@@ -29,39 +52,62 @@ struct VisitorTeam{
     abbreviation: String,   
 }
 
-struct BasketballGamesToday{
-    games: Vec<Stats>,
-}
+fn main() -> color_eyre::Result<()> {
 
-fn main() -> Result<()> {
     color_eyre::install()?;
+    let games = get_games()?;   
+    let mut app = App::new(games);
+    ratatui::run(|terminal| run(terminal,&mut app))?;
+    Ok(())
+}
+fn get_games() -> color_eyre::Result<Vec<Stats>>{
     let url = format!("https://api.balldontlie.io/nba/v1/games");
     let client = reqwest::blocking::Client::new();
-    let now = SystemTime::now();
-    let now:    DateTime<Utc> = now.into();
-    let now = now.to_rfc3339();
+    let now: DateTime<Utc> = SystemTime::now().into();
     let mut params = HashMap::new();
-    params.insert("dates[]", now);
-    let mut games_list = Vec::<Stats>::new();
+    params.insert("dates[]", now.format("%Y-%m-%d").to_string());
     let data: AllData = client.get(url).header(AUTHORIZATION, "65ab2ce7-ad41-43bf-a304-0f7ec82a392f").query(&params).send().expect("Error getting api").json().expect("Error parsing Json");
-    for game in data.data{
-        games_list.push(game);
-    }
-    let terminal = ratatui::init();
-    let result = run(terminal);
-    ratatui::restore();
-    result
+    Ok(data.data)
 }
- 
-fn run(mut terminal: DefaultTerminal) -> Result<()> {
+fn run(terminal: &mut DefaultTerminal, app: &mut App) -> std::io::Result<()>{
     loop {
-        terminal.draw(render)?;
-        if matches!(event::read()?, Event::Key(_)) {
-            break Ok(());
+        terminal.draw(|f| render(f, app))?;
+        if let crossterm::event::Event::Key(key_pressed) = crossterm::event::read()? {
+            use  crossterm::event::KeyCode;
+            match key_pressed.code{
+                KeyCode::Up   | KeyCode::Char('k') => app.scroll_up(),
+                KeyCode::Down | KeyCode::Char('j') => app.scroll_down(),
+                _ => {}
+            }
         }
     }
 }
- 
-fn render(frame: &mut Frame) {
-    frame.render_widget("hello world", frame.area());
+
+fn render(frame: &mut Frame, app: &App) {   
+    let sections = Layout::default().direction(Direction::Vertical).constraints([Constraint::Length(4),Constraint::Min(0),Constraint::Length(3)]).split(frame.area());
+    let title = Paragraph::new(Line::from(vec![Span::styled("NBA Games today",Style::default().fg(Color::White))])).block(Block::default().borders(Borders::ALL));
+let items: Vec<ListItem> = app.games
+    .iter()
+    .enumerate()
+    .map(|(_i, game)| {
+        let title = Line::from(Span::styled(
+            format!("{} vs {}", game.home_team.full_name, game.visitor_team.full_name),
+            Style::default().fg(Color::White),
+        ));
+
+        let score = Line::from(vec![
+            Span::raw(" "),
+            Span::styled(&game.home_team.abbreviation, Style::default().fg(Color::Cyan)),
+            Span::raw(format!(" {} ", game.home_team_score)),
+            Span::styled(&game.visitor_team.abbreviation, Style::default().fg(Color::Cyan)),
+            Span::raw(format!(" {} ", game.visitor_team_score)),
+        ]);
+
+        ListItem::new(vec![title, score, Line::raw("")])
+    })
+    .collect();
+    let list = List::new(items).block(Block::default().title("Games").borders(Borders::ALL)).highlight_style(Style::default().bg(Color::Cyan));
+    frame.render_widget(title, sections[0]);
+    frame.render_widget(list, sections[1]);
+
 }
